@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gemini Chat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-light: #f0f2f5;
+      --bg-dark: #1e1e2f;
+      --text-light: #333;
+      --text-dark: #eee;
+      --user-light: #d1d1d1;
+      --bot-light: #4b6efb;
+      --user-dark: #3a3a4f;
+      --bot-dark: #6a8cff;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #4b6efb, #8e9efb);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: var(--text-light);
+      overflow: hidden;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark {
+      background: #12121f;
+      color: var(--text-dark);
+    }
+
+    header {
+      background: #fff;
+      padding: 15px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    body.dark header {
+      background: #1e1e2f;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .mode-toggle {
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 40px;
+      overflow: hidden;
+    }
+
+    #chat {
+      flex: 1;
+      background: var(--bg-light);
+      border-radius: 16px;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+      scroll-behavior: smooth;
+      transition: background 0.3s;
+    }
+
+    body.dark #chat {
+      background: var(--bg-dark);
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .you {
+      background: var(--user-light);
+      align-self: flex-end;
+    }
+
+    body.dark .you {
+      background: var(--user-dark);
+    }
+
+    .bot {
+      background: var(--bot-light);
+      color: white;
+      align-self: flex-start;
+    }
+
+    body.dark .bot {
+      background: var(--bot-dark);
+    }
+
+    .typing {
+      display: inline-block;
+      position: relative;
+      width: 40px;
+      height: 20px;
+    }
+
+    .typing span {
+      display: block;
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 0;
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+
+    .typing span:nth-child(1) { left: 0; animation-delay: 0s; }
+    .typing span:nth-child(2) { left: 12px; animation-delay: 0.2s; }
+    .typing span:nth-child(3) { left: 24px; animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-8px); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+
+    .chat-input {
+      display: flex;
+      margin-top: 15px;
+      gap: 15px;
+      flex-shrink: 0;
+    }
+
+    .chat-input textarea {
+      flex: 1;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid #ccc;
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      resize: none;
+    }
+
+    .chat-input button {
+      background: #4b6efb;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .chat-input button:hover {
+      background: #3a5ddb;
+    }
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🤖 Gemini Chat</h1>
+    <div class="mode-toggle" id="modeToggle">🌙</div>
+  </header>
+
+  <main>
+    <div id="chat"></div>
+    <div class="chat-input">
+      <textarea id="message" rows="2" placeholder="Type your message..."></textarea>
+      <button id="send">Send</button>
+    </div>
+  </main>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const messageEl = document.getElementById("message");
+    const sendBtn = document.getElementById("send");
+    const modeToggle = document.getElementById("modeToggle");
+
+    let darkMode = false;
+
+    modeToggle.onclick = () => {
+      darkMode = !darkMode;
+      document.body.classList.toggle('dark', darkMode);
+      modeToggle.textContent = darkMode ? '☀️' : '🌙';
+    };
+
+    const geminiEmoji = '🤖';
+    const userEmoji = '😎';
+
+    function addMessage(text, sender, typing=false) {
+      const div = document.createElement('div');
+      div.classList.add('message', sender);
+
+      if (typing) {
+        div.innerHTML = `<span class="typing"><span></span><span></span><span></span></span> ${geminiEmoji}`;
+      } else {
+        div.innerHTML = `<span>${sender === 'you' ? userEmoji : geminiEmoji}</span> ${text}`;
+      }
+
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      return div;
+    }
+
+    sendBtn.onclick = async () => {
+      const msg = messageEl.value.trim();
+      if(!msg) return;
+      addMessage(msg, 'you');
+      messageEl.value = "";
+
+      const typingDiv = addMessage('', 'bot', true);
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+
+      // Replace typing animation with actual reply
+      typingDiv.innerHTML = `<span>${geminiEmoji}</span> ${data.reply}`;
+    };
+
+    messageEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>
